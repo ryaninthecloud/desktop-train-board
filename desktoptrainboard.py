@@ -2,6 +2,10 @@ import tkinter as tk
 from tkinter.font import Font
 
 class MatrixText(tk.Label):
+    """
+    A derived class from the tk.Label class.
+    This class contains only stylistic
+    """
     def __init__(self, master):
         matrix_font = Font(
             family="LED Counter 7",
@@ -16,10 +20,11 @@ class MatrixText(tk.Label):
 
 class DesktopTrainBoard(tk.Tk):
     '''
-    The class for the Desktop Train Board,
-    all functions relating to the display
-    and operation of the DTB should be 
-    contained within this class. 
+    A class that represents the overall
+    application user interface, built of
+    individual UI components as well
+    as the functionality of updating the
+    display.
     '''
     def __init__(self):
         super().__init__()
