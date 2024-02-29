@@ -1,5 +1,6 @@
 from tkinter import Label
 from tkinter.font import Font
+from threading import Event, Thread
 import time 
 
 class MatrixText(Label):
@@ -25,9 +26,9 @@ class MatrixText(Label):
                         justify="left",
                         anchor="nw")
 
-    def scroll_text(self) -> None:
+    def scroll_text(self, stop_event: Event) -> None:
         """
-        Blocking function that creates the illusion of
+        Thread centric function that creates the illusion of
         scrolling text by iterating through the
         characters in the label text and removing, replacing
         the first and last characters.
@@ -36,6 +37,9 @@ class MatrixText(Label):
         text length is to make the text scrolling smooth,
         the second within the while True statement is
         to create a break between text scrolls
+
+        :parameters:
+            :stop_event: threading.Event to call to close the scroll safely 
         """
     
         text_to_scroll = self["text"] + " "
@@ -51,3 +55,30 @@ class MatrixText(Label):
                 time.sleep(0.4)
 
             time.sleep(1)
+
+class ThreadSafetyContainer:
+    """
+    A class to wrap around any long-running
+    threads used in the train board and the 
+    associated event that can be used to signal
+    a safe-stopping to the threaded function.
+    """
+    def __init__(self, thread: Thread, event: Event):
+        """
+        Initialisation of Thread Safety Container
+
+        :parameters:
+            thread: Thread: the thread that has been created
+            event: Event: the event that has been passed to the threaded function
+        """
+        self.contained_thread = thread
+        self.stoppage_event = event
+    
+    def safe_stop_thread(self) -> None:
+        """
+        A function to set the Event and then
+        joining the thread for stopping.
+        """
+
+        self.stoppage_event.set()
+        self.contained_thread.join()

@@ -119,7 +119,7 @@ class DesktopTrainBoard(tk.Tk):
     def main_application(self):
         while True:
             self.update_board()
-            time.sleep(60)
+            time.sleep(1)
     
     def start_board(self):
         thread = Thread(target=self.main_application, daemon=True)
