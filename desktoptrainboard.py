@@ -1,5 +1,5 @@
 import tkinter as tk
-from auxiliary_components import MatrixText, ThreadSafetyContainer
+from auxiliary_components import MatrixText, ThreadSafetyContainer, DispatchRow, MessageRow
 import time
 from threading import Thread, Event
 import requests
@@ -83,10 +83,14 @@ class DesktopTrainBoard(tk.Tk):
         :returns:
             service_data: dictionary response
         """
-        service_data = requests.request(
-            method="get",
-            url="var"
-        )
+        try:
+            service_data = requests.request(
+                method="get",
+                url="var"
+            )
+        except:
+            self.message_row.update_message("Error cx to API...")
+            return False
         service_data = service_data.json()
         return service_data
 
@@ -118,9 +122,16 @@ class DesktopTrainBoard(tk.Tk):
             }
         ]
         print("**BOARD UPDATE STARTING**")
-
+        
         service_data = self.get_service_data()
 
+        while not service_data:
+            time.sleep(1)
+            print("retrying cx")
+            self.message_row.update_message("Retrying...")
+            time.sleep(2)
+            self.get_service_data()
+        
         print("stopping thread")
         self.safe_stop_ui_threads()
         self.ui_threads.clear()
@@ -153,59 +164,11 @@ class DesktopTrainBoard(tk.Tk):
     def main_application(self):
         while True:
             self.update_board()
-            time.sleep(20)
+            time.sleep(1)
     
     def start_board(self):
         thread = Thread(target=self.main_application, daemon=True)
         thread.start()
-
-
-class DispatchRow:
-    """
-    A class that represents each single
-    row of dispatch board, this includes
-    the:
-        - Ordinal position of the service (1st...3rd)
-        - Final destination of the service (i.e. Birmingham)
-        - Arrival or Departure time
-
-    """
-    def __init__(self, container: tk.Frame, row: int):
-
-        self.dispatch_row = row
-        self.dispatch_ordinal = MatrixText(container)
-        self.final_destination = MatrixText(container)
-        self.dispatch_time = MatrixText(container)
-
-        self.dispatch_ordinal.grid(row=row, column=0, sticky="nsew", padx=(0,0))
-        self.final_destination.grid(row=row, column=1, sticky="nsew", padx=(0,10))
-        self.dispatch_time.grid(row=row, column=2, sticky="nsew")
-    
-    def set_row(self, dispatch_information: dict) -> None:
-        """
-        Updates or inserts the dispatch row information:
-            - ordinal
-            - final destination
-            - exp/sch arrival time
-        
-        :parameters
-            dipatch_information: dictionary: should have the following keys
-                - ordinal
-                - destination
-                - exp_time
-                - sch_time
-        """
-        self.dispatch_ordinal.config(text=dispatch_information["ordinal"])
-        self.final_destination.config(text=dispatch_information["destination"])
-        self.dispatch_time.config(text=dispatch_information["exp_time"])
-
-
-class MessageRow(tk.Frame):
-    def __init__(self, container: tk.Frame, message_to_display: str):
-        super().__init__(container, background="#000000")
-        self.message = MatrixText(container)
-        self.message.grid(row=0, column=0, sticky="nsew", padx=(0,0))
-        self.message.config(text=message_to_display)
 
 if __name__ == "__main__":
     app = DesktopTrainBoard()

@@ -1,4 +1,4 @@
-from tkinter import Label
+from tkinter import Label, Frame
 from tkinter.font import Font
 from threading import Event, Thread
 import time 
@@ -48,14 +48,14 @@ class MatrixText(Label):
         self.update_idletasks()
 
         while True:
-            if stop_event.isSet():
-                break
             for i in range(len(text_to_scroll) + 1):
                 self.config(text = text_to_scroll[i:] + text_to_scroll[:i])
                 self.update()
                 self.update_idletasks()
                 time.sleep(0.4)
-
+            if stop_event.isSet():
+                print("!!!!event stoppage")
+                break
             time.sleep(1)
 
 class ThreadSafetyContainer:
@@ -84,3 +84,62 @@ class ThreadSafetyContainer:
 
         self.stoppage_event.set()
         self.contained_thread.join()
+
+class DispatchRow:
+    """
+    A class that represents each single
+    row of dispatch board, this includes
+    the:
+        - Ordinal position of the service (1st...3rd)
+        - Final destination of the service (i.e. Birmingham)
+        - Arrival or Departure time
+
+    """
+    def __init__(self, container: Frame, row: int):
+
+        self.dispatch_row = row
+        self.dispatch_ordinal = MatrixText(container)
+        self.final_destination = MatrixText(container)
+        self.dispatch_time = MatrixText(container)
+
+        self.dispatch_ordinal.grid(row=row, column=0, sticky="nsew", padx=(0,0))
+        self.final_destination.grid(row=row, column=1, sticky="nsew", padx=(0,10))
+        self.dispatch_time.grid(row=row, column=2, sticky="nsew")
+    
+    def set_row(self, dispatch_information: dict) -> None:
+        """
+        Updates or inserts the dispatch row information:
+            - ordinal
+            - final destination
+            - exp/sch arrival time
+        
+        :parameters
+            dipatch_information: dictionary: should have the following keys
+                - ordinal
+                - destination
+                - exp_time
+                - sch_time
+        """
+        self.dispatch_ordinal.config(text=dispatch_information["ordinal"])
+        self.final_destination.config(text=dispatch_information["destination"])
+
+        if dispatch_information["exp_time"] == "On time":
+            self.dispatch_time.config(text=dispatch_information["sch_time"], fg="#4CBB17")
+        
+        else:
+            self.dispatch_time.config(text=dispatch_information["exp_time"], fg="#EE4B2B")
+
+
+class MessageRow(Frame):
+    def __init__(self, container: Frame, message_to_display: str):
+        super().__init__(container, background="#000000")
+        self.message = MatrixText(container)
+        self.message.grid(row=0, column=0, sticky="nsew", padx=(0,0))
+        self.message.config(text=message_to_display)
+    
+    def update_message(self, new_message: str):
+        """
+        A method to update the message within
+        the row.
+        """
+        self.message.config(text=new_message)
