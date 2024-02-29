@@ -12,10 +12,8 @@ class MatrixText(tk.Label):
     font which shows as an LED matrix style
     font.
 
-    --------------
-    custom methods
-    --------------
-        > scroll_text
+    :custom_methods:
+        > scroll_text - scroll the label's current text
     """
     def __init__(self, master):
         matrix_font = Font(
@@ -29,41 +27,38 @@ class MatrixText(tk.Label):
                         justify="left",
                         anchor="nw")
 
-    def scroll_text(self):
+    def scroll_text(self) -> None:
         """
-        Function that creates the illusion of
+        Blocking function that creates the illusion of
         scrolling text by iterating through the
-        characters in the text and removing, replacing
+        characters in the label text and removing, replacing
         the first and last characters.
 
-        !! This function is blocking
+        There are two sleep calls, within the iteration of
+        text length is to make the text scrolling smooth,
+        the second within the while True statement is
+        to create a break between text scrolls
         """
-        destin_text = self['text'] + " "
-        self.config(text = destin_text)
+    
+        text_to_scroll = self["text"] + " "
+        self.config(text = text_to_scroll)
         self.update()
         self.update_idletasks()
+
         while True:
-            for i in range(len(destin_text) + 1):
-                self.config(text = destin_text[i:] + destin_text[:i])
+            for i in range(len(text_to_scroll) + 1):
+                self.config(text = text_to_scroll[i:] + text_to_scroll[:i])
                 self.update()
                 self.update_idletasks()
                 time.sleep(0.4)
+
             time.sleep(1)
 
-    def threaded_scroll_text(self):
-        thread = Thread(target=self.scroll_text)
-        thread.start()
-        thread.join()
-        return thread
-
 class DesktopTrainBoard(tk.Tk):
-    '''
-    A class that represents the overall
-    application user interface, built of
-    individual UI components as well
-    as the functionality of updating the
-    display.
-    '''
+    """
+    A class representing the train board application.
+    A derived class of the the Tk class in Tkinter.
+    """
     def __init__(self):
         super().__init__()
         self.title("Desktop Trainboard")
@@ -71,11 +66,18 @@ class DesktopTrainBoard(tk.Tk):
         self.resizable(width=False,height=False)
         self.attributes('-topmost', True)
         self.iconbitmap("assets/trainboard_icon.ico")
-        #self.overrideredirect(True)
     
         self.ui_threads = []
         self.dispatch_rows = []
 
+        self.build_display_board()
+
+    
+    def build_display_board(self) -> None:
+        """
+        Builds the display board that will display
+        the services.
+        """
         self.dispatch_container = tk.Frame(self, bg="#000000")
         self.dispatch_container.pack(expand=True, side="top", fill="both", anchor="w")
 
@@ -86,33 +88,37 @@ class DesktopTrainBoard(tk.Tk):
         self.dispatch_container.grid_columnconfigure(1, weight=1)
         self.dispatch_container.grid_columnconfigure(2, weight=0)
 
-        message_container = tk.Frame(self, bg="#000000")
-        message_container.pack(expand=True, side="top", fill="both", anchor="e")
-    
-        message_container.grid_rowconfigure(0, weight=1)
-        message_container.grid_columnconfigure(0, weight=1)
-
-
         self.dispatch_container.update_idletasks()
         self.dispatch_container.update()
-    
-        MessageRow(message_container, "Some message...")
-    
-    def start_scrolling_threads(self):
-        for thread in self.ui_threads:
-            thread.start()
-            print('thread started')
 
-    def get_parse_train_services(self):
+        self.message_container = tk.Frame(self, bg="#000000")
+        self.message_container.pack(expand=True, side="top", fill="both", anchor="e")
+    
+        self.message_container.grid_rowconfigure(0, weight=1)
+        self.message_container.grid_columnconfigure(0, weight=1)
+
+        MessageRow(self.message_container, "Some message...")
+
+    def get_train_services(self, endpoint: str = None) -> list[dict]:
+        """
+        Method that makes calls to the train services API
+        to retrieve current services at a station.
+
+        :parameters:
+            endpoint: str: for future implementations to specify
+                            the departure or arrival endpoint.
+        
+        :returns:
+            train_services: list of dictionaries containing services
+        """
         train_services = requests.request(
             method="get",
-            url="http://trainboardapi.svc.spooknet.uk/api/get_station_departures"
+            url="put_in_variable"
         )
         train_services = train_services.json()
         return train_services["train_services"]
 
     def update_board(self):
-        ####MEMORY LEAK SOMEWHERE?!??!?!?!
         test_services = [
             {
                 "ordinal":"1st",
@@ -152,7 +158,7 @@ class DesktopTrainBoard(tk.Tk):
             self.update_board()
             time.sleep(10)
     
-    def call_thread(self):
+    def start_board(self):
         thread = Thread(target=self.main_application, daemon=True)
         thread.start()
 
@@ -171,20 +177,32 @@ class DispatchRow:
     def __init__(self, container: tk.Frame, row: int, dispatch_information: tuple):
 
         self.dispatch_row = row
-
         self.dispatch_ordinal = MatrixText(container)
-        self.dispatch_ordinal.config(text=dispatch_information[0])
-
         self.final_destination = MatrixText(container)
-        self.final_destination.config(text=dispatch_information[1])
-
         self.dispatch_time = MatrixText(container)
-        self.dispatch_time.config(text=dispatch_information[2])
-        
+
         self.dispatch_ordinal.grid(row=row, column=0, sticky="nsew", padx=(0,0))
         self.final_destination.grid(row=row, column=1, sticky="nsew", padx=(0,10))
         self.dispatch_time.grid(row=row, column=2, sticky="nsew")
     
+    def set_row(self, dispatch_information: dict) -> None:
+        """
+        Updates or inserts the dispatch row information:
+            - ordinal
+            - final destination
+            - exp/sch arrival time
+        
+        :parameters
+            dipatch_information: dictionary: should have the following keys
+                - ordinal
+                - destination
+                - exp_time
+                - sch_time
+        """
+        self.dispatch_ordinal.config(text=dispatch_information["ordinal"])
+        self.final_destination.config(text=dispatch_information["destination"])
+        self.dispatch_time.config(text=dispatch_information["exp_time"])
+
 
 class MessageRow(tk.Frame):
     def __init__(self, master, message_to_display: str):
@@ -194,5 +212,5 @@ class MessageRow(tk.Frame):
 
 if __name__ == "__main__":
     app = DesktopTrainBoard()
-    app.after(100, app.call_thread)
+    app.after(100, app.start_board)
     app.mainloop()
