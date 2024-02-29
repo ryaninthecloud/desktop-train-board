@@ -21,7 +21,7 @@ class DesktopTrainBoard(tk.Tk):
             dispatch_rows: list of DispatchRow objects within the dispatch_container 
         """
         self.title("Desktop Trainboard")
-        self.geometry("300x150")
+        self.geometry("300x200")
         self.resizable(width=False,height=False)
         self.attributes('-topmost', True)
         self.iconbitmap("assets/trainboard_icon.ico")
@@ -114,12 +114,14 @@ class DesktopTrainBoard(tk.Tk):
                 "exp_time":"12:00"
             }
         ]
+        print("**BOARD UPDATE STARTING**")
 
         for i, service in enumerate(self.get_train_services()):
             print("train services updated", service['destination'])
             self.dispatch_rows[i].set_row(service)
 
         if self.ui_threads:
+            print("stopping thread")
             self.safe_stop_ui_threads()
             self.ui_threads.clear()
 
@@ -127,17 +129,19 @@ class DesktopTrainBoard(tk.Tk):
             destination_alloted_width = self.dispatch_container.grid_bbox(column=1, row=dispatch_row.dispatch_row)[2]
             destination_actual_width = dispatch_row.final_destination.winfo_reqwidth()
             if (destination_actual_width > destination_alloted_width):
+                print("longer than display destination")
                 stop_event = Event()
                 thread = Thread(target=dispatch_row.final_destination.scroll_text, args=(stop_event,), daemon=True)
                 thread_safety_container = ThreadSafetyContainer(thread = thread, event = stop_event)
-                thread_safety_container.contained_thread.start()
                 self.ui_threads.append(thread_safety_container)
-
+        
+        if self.ui_threads:
+            [thread.contained_thread.start() for thread in self.ui_threads]
     
     def main_application(self):
         while True:
             self.update_board()
-            time.sleep(60)
+            time.sleep(20)
     
     def start_board(self):
         thread = Thread(target=self.main_application, daemon=True)

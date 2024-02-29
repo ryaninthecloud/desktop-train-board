@@ -48,6 +48,8 @@ class MatrixText(Label):
         self.update_idletasks()
 
         while True:
+            if stop_event.isSet():
+                break
             for i in range(len(text_to_scroll) + 1):
                 self.config(text = text_to_scroll[i:] + text_to_scroll[:i])
                 self.update()
