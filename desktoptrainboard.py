@@ -1,58 +1,8 @@
 import tkinter as tk
-from tkinter.font import Font
+from auxiliary_components import MatrixText
 import time
 from threading import Thread
 import requests
-
-class MatrixText(tk.Label):
-    """
-    A derived class from the tk.Label class.
-    This class is here to provide stylistic
-    properties to the label, including the
-    font which shows as an LED matrix style
-    font.
-
-    :custom_methods:
-        > scroll_text - scroll the label's current text
-    """
-    def __init__(self, master):
-        matrix_font = Font(
-            family="LED Counter 7",
-            size="22"
-        )
-        super().__init__(master, 
-                        font=matrix_font,
-                        bg="#000000",
-                        fg="#ffcc00",
-                        justify="left",
-                        anchor="nw")
-
-    def scroll_text(self) -> None:
-        """
-        Blocking function that creates the illusion of
-        scrolling text by iterating through the
-        characters in the label text and removing, replacing
-        the first and last characters.
-
-        There are two sleep calls, within the iteration of
-        text length is to make the text scrolling smooth,
-        the second within the while True statement is
-        to create a break between text scrolls
-        """
-    
-        text_to_scroll = self["text"] + " "
-        self.config(text = text_to_scroll)
-        self.update()
-        self.update_idletasks()
-
-        while True:
-            for i in range(len(text_to_scroll) + 1):
-                self.config(text = text_to_scroll[i:] + text_to_scroll[:i])
-                self.update()
-                self.update_idletasks()
-                time.sleep(0.4)
-
-            time.sleep(1)
 
 class DesktopTrainBoard(tk.Tk):
     """
@@ -70,18 +20,20 @@ class DesktopTrainBoard(tk.Tk):
             ui_threads: list of threads managing the updates to the gui
             dispatch_rows: list of DispatchRow objects within the dispatch_container 
         """
-        self.dispatch_container = None
-        self.message_container = None
-
         self.title("Desktop Trainboard")
         self.geometry("300x150")
         self.resizable(width=False,height=False)
         self.attributes('-topmost', True)
         self.iconbitmap("assets/trainboard_icon.ico")
 
+        self.dispatch_container = None
+        self.message_container = None
+        self.ui_threads = []
+        self.dispatch_rows = []
+
         self.build_display_board()
     
-        self.ui_threads = []
+        
         self.dispatch_rows = [
             DispatchRow(container = self.dispatch_container, row = 0),
             DispatchRow(container = self.dispatch_container, row = 1),
@@ -151,13 +103,9 @@ class DesktopTrainBoard(tk.Tk):
                 "exp_time":"12:00"
             }
         ]
-        for i, service in enumerate(self.get_parse_train_services()):
-            service_information = (
-                service["ordinal"],
-                service["destination"],
-                service["exp_time"]
-            )
-            self.dispatch_rows.append(DispatchRow(self.dispatch_container, i, service_information))
+
+        for i, service in enumerate(test_services):
+            self.dispatch_rows[i].set_row(service)
 
         for dispatch_row in self.dispatch_rows:
             destination_alloted_width = self.dispatch_container.grid_bbox(column=1, row=dispatch_row.dispatch_row)[2]
@@ -171,12 +119,11 @@ class DesktopTrainBoard(tk.Tk):
     def main_application(self):
         while True:
             self.update_board()
-            time.sleep(10)
+            time.sleep(60)
     
     def start_board(self):
         thread = Thread(target=self.main_application, daemon=True)
         thread.start()
-
 
 
 class DispatchRow:
