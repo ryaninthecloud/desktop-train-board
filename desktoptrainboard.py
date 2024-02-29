@@ -39,6 +39,8 @@ class DesktopTrainBoard(tk.Tk):
             DispatchRow(container = self.dispatch_container, row = 1),
             DispatchRow(container = self.dispatch_container, row = 2)
         ]
+
+        self.message_row = MessageRow(self.message_container, "Connecting...")
     
     def build_display_board(self) -> None:
         """
@@ -64,12 +66,12 @@ class DesktopTrainBoard(tk.Tk):
         self.message_container.grid_rowconfigure(0, weight=1)
         self.message_container.grid_columnconfigure(0, weight=1)
 
-        MessageRow(self.message_container, "Some message...")
+        
 
         self.message_container.update_idletasks()
         self.message_container.update()
 
-    def get_train_services(self, endpoint: str = None) -> list[dict]:
+    def get_service_data(self, endpoint: str = None) -> list[dict]:
         """
         Method that makes calls to the train services API
         to retrieve current services at a station.
@@ -79,22 +81,23 @@ class DesktopTrainBoard(tk.Tk):
                             the departure or arrival endpoint.
         
         :returns:
-            train_services: list of dictionaries containing services
+            service_data: dictionary response
         """
-        train_services = requests.request(
+        service_data = requests.request(
             method="get",
-            url="http://trainboardapi.svc.spooknet.uk/api/get_station_departures"
+            url="var"
         )
-        train_services = train_services.json()
-        return train_services["train_services"]
+        service_data = service_data.json()
+        return service_data
 
     def safe_stop_ui_threads(self):
         """
         Safely stop any running UI threads by setting their
         event and then waiting for the thread to join.
         """
-        for thread_safety_container in self.ui_threads:
-            thread_safety_container.safe_stop_thread()
+        if self.ui_threads:
+            for thread_safety_container in self.ui_threads:
+                thread_safety_container.safe_stop_thread()
 
     def update_board(self):
         test_services = [
@@ -116,18 +119,24 @@ class DesktopTrainBoard(tk.Tk):
         ]
         print("**BOARD UPDATE STARTING**")
 
-        if self.ui_threads:
-            print("stopping thread")
-            self.safe_stop_ui_threads()
-            self.ui_threads.clear()
+        service_data = self.get_service_data()
 
-        for i, service in enumerate(self.get_train_services()):
+        print("stopping thread")
+        self.safe_stop_ui_threads()
+        self.ui_threads.clear()
+
+        for i, service in enumerate(service_data["train_services"]):
             print("train services updated", service['destination'])
             self.dispatch_rows[i].set_row(service)
 
-        
-
+        self.message_row.message.config(text=service_data["warning_messages"])
+        message_scroll_stop_event = Event()
+        message_scroll_thread = Thread(target=self.message_row.message.scroll_text, daemon=True, args=(message_scroll_stop_event,))
+        message_thread_safety_container = ThreadSafetyContainer(thread = message_scroll_thread, event = message_scroll_stop_event)
+        self.ui_threads.append(message_thread_safety_container)
+    
         for dispatch_row in self.dispatch_rows:
+            print("evaluating row")
             destination_alloted_width = self.dispatch_container.grid_bbox(column=1, row=dispatch_row.dispatch_row)[2]
             destination_actual_width = dispatch_row.final_destination.winfo_reqwidth()
             if (destination_actual_width > destination_alloted_width):
@@ -136,6 +145,7 @@ class DesktopTrainBoard(tk.Tk):
                 thread = Thread(target=dispatch_row.final_destination.scroll_text, args=(stop_event,), daemon=True)
                 thread_safety_container = ThreadSafetyContainer(thread = thread, event = stop_event)
                 self.ui_threads.append(thread_safety_container)
+                print("thread managed for", dispatch_row.final_destination['text'])
         
         if self.ui_threads:
             [thread.contained_thread.start() for thread in self.ui_threads]
@@ -193,8 +203,9 @@ class DispatchRow:
 class MessageRow(tk.Frame):
     def __init__(self, container: tk.Frame, message_to_display: str):
         super().__init__(container, background="#000000")
-        message = MatrixText(container)
-        message.config(text=message_to_display)
+        self.message = MatrixText(container)
+        self.message.grid(row=0, column=0, sticky="nsew", padx=(0,0))
+        self.message.config(text=message_to_display)
 
 if __name__ == "__main__":
     app = DesktopTrainBoard()
