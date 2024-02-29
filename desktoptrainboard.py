@@ -116,14 +116,16 @@ class DesktopTrainBoard(tk.Tk):
         ]
         print("**BOARD UPDATE STARTING**")
 
-        for i, service in enumerate(self.get_train_services()):
-            print("train services updated", service['destination'])
-            self.dispatch_rows[i].set_row(service)
-
         if self.ui_threads:
             print("stopping thread")
             self.safe_stop_ui_threads()
             self.ui_threads.clear()
+
+        for i, service in enumerate(self.get_train_services()):
+            print("train services updated", service['destination'])
+            self.dispatch_rows[i].set_row(service)
+
+        
 
         for dispatch_row in self.dispatch_rows:
             destination_alloted_width = self.dispatch_container.grid_bbox(column=1, row=dispatch_row.dispatch_row)[2]
