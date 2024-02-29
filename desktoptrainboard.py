@@ -61,17 +61,32 @@ class DesktopTrainBoard(tk.Tk):
     """
     def __init__(self):
         super().__init__()
+        """
+        Initialisation of the application.
+
+        :attributes:
+            dispatch_container: tk.Frame containing dispatch rows
+            message_container: tk.Frame containing service message row
+            ui_threads: list of threads managing the updates to the gui
+            dispatch_rows: list of DispatchRow objects within the dispatch_container 
+        """
+        self.dispatch_container = None
+        self.message_container = None
+
         self.title("Desktop Trainboard")
         self.geometry("300x150")
         self.resizable(width=False,height=False)
         self.attributes('-topmost', True)
         self.iconbitmap("assets/trainboard_icon.ico")
-    
-        self.ui_threads = []
-        self.dispatch_rows = []
 
         self.build_display_board()
-
+    
+        self.ui_threads = []
+        self.dispatch_rows = [
+            DispatchRow(container = self.dispatch_container, row = 0),
+            DispatchRow(container = self.dispatch_container, row = 1),
+            DispatchRow(container = self.dispatch_container, row = 2)
+        ]
     
     def build_display_board(self) -> None:
         """
@@ -174,7 +189,7 @@ class DispatchRow:
         - Arrival or Departure time
 
     """
-    def __init__(self, container: tk.Frame, row: int, dispatch_information: tuple):
+    def __init__(self, container: tk.Frame, row: int):
 
         self.dispatch_row = row
         self.dispatch_ordinal = MatrixText(container)
